@@ -1,0 +1,154 @@
+---
+title: "Problem03_Lyft_Flexdashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r}
+knitr::opts_chunk$set(options(dplyr.summarise.inform = FALSE))
+```
+
+```{r}
+library(flexdashboard)
+```
+
+```{r}
+#| echo: false
+#| include: false
+#| results: hide
+library(tidyverse)
+library(skimr)
+library(lubridate)
+library(forcats)
+library(readr)
+library(leaflet)
+library(plotly)
+```
+
+```{r, echo=FALSE, include=FALSE, results='hide'}
+
+for (i in 1:9) 
+  {
+URL <- paste0("https://s3.amazonaws.com/baywheels-data/20220",i,"-baywheels-tripdata.csv.zip")
+
+download.file(URL, destfile = paste0("/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/20220",i,"-baywheels-tripdata.csv.zip"), method="curl")
+}
+
+URL <- "https://s3.amazonaws.com/baywheels-data/202210-baywheels-tripdata.csv.zip"
+download.file(URL, destfile = "/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202210-baywheels-tripdata.csv.zip", method="curl")
+
+```
+
+```{r, echo = FALSE, include = FALSE}
+for (i in 1:9) 
+{
+unzip(paste0("/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/20220", i, "-baywheels-tripdata.csv.zip"))
+}
+
+unzip("/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202210-baywheels-tripdata.csv.zip")
+```
+
+```{r, echo=FALSE, include=FALSE, results='hide'}
+
+for (i in 1:9) 
+{
+fn <- paste0("/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/20220", i, "-baywheels-tripdata.csv.zip")
+if (file.exists(fn)) file.remove(fn)
+}
+
+
+fn <- "/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202210-baywheels-tripdata.csv.zip"
+if (file.exists(fn)) file.remove(fn)
+
+```
+
+```{r, echo=FALSE, include=FALSE, results='hide'}
+baywheels_2022_01 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202201-baywheels-tripdata.csv")
+
+baywheels_2022_02 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202202-baywheels-tripdata.csv")
+
+baywheels_2022_03 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202203-baywheels-tripdata.csv")
+
+baywheels_2022_04 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202204-baywheels-tripdata.csv")
+
+baywheels_2022_05 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202205-baywheels-tripdata.csv")
+
+baywheels_2022_06 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202206-baywheels-tripdata.csv")
+
+baywheels_2022_07 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202207-baywheels-tripdata.csv")
+
+baywheels_2022_08 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202208-baywheels-tripdata.csv")
+
+baywheels_2022_09 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202209-baywheels-tripdata.csv")
+
+baywheels_2022_10 <- read_csv(file="/Users/radhika/Desktop/Stat 651 - Data Viz/Homeworks/Problem03_Lyft_Flexdashboard/202210-baywheels-tripdata.csv")
+```
+
+```{r, echo=FALSE, include=FALSE, results='hide'}
+cleaned_baywheels_2022_10 <- baywheels_2022_10 %>%
+  drop_na()
+
+cleaned_baywheels_2022_10
+```
+
+```{r, echo=FALSE, include=FALSE, results='hide'}
+new_baywheels_2022_10 <- cleaned_baywheels_2022_10 %>% 
+  mutate(weekday = wday(started_at, label = T),
+         trip_duration_sec = difftime(ended_at, started_at)
+         )
+
+new_baywheels_2022_10
+```
+
+## Column {data-width="450"}
+
+### Leaflet map of rides started at San Francisco stations
+
+```{r}
+border <- tibble(lat = 37.8, lon = -122)
+
+new_baywheels_2022_10 %>% 
+  head(1000) %>% 
+ filter(start_lat > 37.8, start_lng < 122) %>% 
+  leaflet() %>% 
+  addTiles() %>%
+  addMarkers(lng=~start_lng, lat=~start_lat, 
+             popup = ~paste(start_station_name, sep = '<br/>')) %>% 
+  setView(lat = border$lat, 
+          lng = border$lon, 
+          zoom = 14)
+```
+
+## Row {data-width="350"}
+
+### Average duration of trips in Bay area by bike type
+
+```{r, warning=FALSE}
+x <- new_baywheels_2022_10 %>%
+  group_by(weekday, rideable_type) %>%
+  summarize(avg_trip_duration = mean(trip_duration_sec)) %>% 
+  ggplot(aes(x=weekday, y = avg_trip_duration, fill = rideable_type)) +
+  geom_bar(stat="identity") +
+  labs(title = "Duration of trips in Bay area", y = "avg trip duration(in sec)")
+
+ggplotly(x)
+```
+
+### Average Trip duration by rider type
+
+```{r}
+
+summary_stat1 <- new_baywheels_2022_10 %>%
+  group_by(weekday, member_casual) %>%
+  summarize(avg_trip_duration = mean(trip_duration_sec)) %>% 
+  arrange(desc(avg_trip_duration))
+
+
+stat_table <- summary_stat1 %>% 
+  pivot_wider(names_from = member_casual, values_from = avg_trip_duration)
+
+
+knitr::kable(stat_table)
+```
