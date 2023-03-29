@@ -1,4 +1,10 @@
 *.qmd linguist-language=R
 *.rmd linguist-language=R
 *.Rmd linguist-language=R
+*.html linguist-language=R
+*.pdf linguist-language=R
+*.rpubs linguist-language=R
+
+
+
 
